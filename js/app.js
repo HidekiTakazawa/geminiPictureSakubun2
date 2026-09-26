@@ -32,6 +32,7 @@ createApp({
     const activeTab = ref('words'); // 'words' | 'model' | 'correction'
     const modelLevel = ref('beginner'); // 'beginner' | 'intermediate'
     const essayTextarea = ref(null);
+    const isPrinting = ref(false);
 
     // トースト通知
     const toasts = ref([]);
@@ -41,6 +42,20 @@ createApp({
       setTimeout(() => {
         toasts.value = toasts.value.filter(t => t.id !== id);
       }, 4500);
+    };
+
+    // プリント機能
+    const printLearningMaterial = () => {
+      if (!currentImage.value) {
+        showToast('印刷するデータがありません。画像をアップロードして解析してください。', 'warning');
+        return;
+      }
+      isPrinting.value = true;
+      // UIが更新されるのを待ってから印刷ダイアログを開く
+      nextTick(() => {
+        window.print();
+        isPrinting.value = false;
+      });
     };
 
     // 初期化
@@ -802,7 +817,11 @@ createApp({
       activeTab,
       modelLevel,
       speakChinese,
-      toasts
+      toasts,
+
+      // 印刷機能
+      isPrinting,
+      printLearningMaterial
     };
   }
 }).mount('#app');

@@ -99,6 +99,11 @@
             <span v-else>🌙</span>
           </button>
 
+          <!-- プリントボタン -->
+          <button @click="printLearningMaterial" class="btn-icon" title="学習内容をプリント(PDF)">
+            🖨️
+          </button>
+
           <!-- 設定ボタン -->
           <button @click="openSettings" class="btn-icon" title="GAS連携・設定">
             ⚙️
@@ -290,246 +295,248 @@
               </p>
             </div>
 
-            <!-- タブ1: 単語一覧 -->
-            <div v-else-if="activeTab === 'words'">
-              <div v-if="analysisData && analysisData.words && analysisData.words.length > 0">
-                
-                <!-- シーン概要 & キャッシュインジケータ -->
-                <div class="scene-summary-bar">
-                  <div v-if="analysisData.scene_description_ja" class="scene-summary">
-                    <span>💡 <strong>シーン:</strong> {{ analysisData.scene_description_ja }}</span>
+            <template v-else>
+              <!-- タブ1: 単語一覧 -->
+              <div v-show="activeTab === 'words' || isPrinting" class="print-section print-order-1">
+                <div v-if="analysisData && analysisData.words && analysisData.words.length > 0">
+                  
+                  <!-- シーン概要 & キャッシュインジケータ -->
+                  <div class="scene-summary-bar">
+                    <div v-if="analysisData.scene_description_ja" class="scene-summary">
+                      <span>💡 <strong>シーン:</strong> {{ analysisData.scene_description_ja }}</span>
+                    </div>
+                  </div>
+
+                  <div class="word-grid">
+                    <div v-for="(item, idx) in analysisData.words" :key="idx" class="word-card">
+                      <div class="word-header">
+                        <div class="word-main">
+                          <span class="chinese-text word-title">{{ item.word }}</span>
+                          <span class="pinyin-text">{{ item.pinyin }}</span>
+                        </div>
+                        <div class="flex items-center gap-1 word-actions">
+                          <button @click="speakChinese(item.word)" class="action-btn-sm" title="単語の発音を聴く">🔊</button>
+                          <button @click="insertWordToEssay(item.word)" class="action-btn-sm" title="作文欄にこの単語を挿入">＋</button>
+                        </div>
+                      </div>
+
+                      <div class="word-details">
+                        <span class="pos-badge">{{ item.pos }}</span>
+                        <span class="meaning-text">{{ item.meaning }}</span>
+                      </div>
+
+                      <!-- 例文 -->
+                      <div v-if="item.example_cn" class="word-example">
+                        <div class="flex items-center justify-between">
+                          <span class="example-cn">{{ item.example_cn }}</span>
+                          <button @click="speakChinese(item.example_cn)" class="action-btn-sm word-example-audio" style="width: 22px; height: 22px; font-size: 0.7rem;">🔊</button>
+                        </div>
+                        <div class="example-pinyin">{{ item.example_pinyin }}</div>
+                        <div class="example-ja">{{ item.example_ja }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 1.25rem; text-align: center;" class="tab-nav-footer">
+                    <button @click="activeTab = 'model'" class="btn btn-outline" style="font-size: 0.85rem; padding: 0.5rem 1.25rem;">
+                      📖 模範作文を見る ➔
+                    </button>
                   </div>
                 </div>
 
-                <div class="word-grid">
-                  <div v-for="(item, idx) in analysisData.words" :key="idx" class="word-card">
-                    <div class="word-header">
-                      <div class="word-main">
-                        <span class="chinese-text word-title">{{ item.word }}</span>
-                        <span class="pinyin-text">{{ item.pinyin }}</span>
-                      </div>
-                      <div class="flex items-center gap-1">
-                        <button @click="speakChinese(item.word)" class="action-btn-sm" title="単語の発音を聴く">🔊</button>
-                        <button @click="insertWordToEssay(item.word)" class="action-btn-sm" title="作文欄にこの単語を挿入">＋</button>
-                      </div>
+                <!-- 未解析プレースホルダー -->
+                <div v-else class="empty-state">
+                  <div class="empty-icon">🔍</div>
+                  <h3>画像を選択して解析してください</h3>
+                  <p style="font-size: 0.85rem; margin-top: 0.35rem;">
+                    写真をアップロードして「✨ AIで画像を解析」をクリックすると、AIが写真内の事物を観察し、中国語の重要単語と例文を抽出します。
+                  </p>
+                  <button v-if="currentImage" @click="analyzeImage(false)" class="btn btn-primary" style="margin-top: 1.25rem;">
+                    ✨ 今すぐ画像を解析する
+                  </button>
+                </div>
+              </div>
+
+              <!-- タブ2: 模範作文 -->
+              <div v-show="activeTab === 'model' || isPrinting" class="print-section print-order-3">
+                <div v-if="analysisData && analysisData.model_essays">
+                  
+                  <!-- レベル切り替えボタン -->
+                  <div class="level-switch">
+                    <button 
+                      class="level-btn" 
+                      :class="{ active: modelLevel === 'beginner' }" 
+                      @click="modelLevel = 'beginner'">
+                      🌱 初級（HSK 1-2 相当）
+                    </button>
+                    <button 
+                      class="level-btn" 
+                      :class="{ active: modelLevel === 'intermediate' }" 
+                      @click="modelLevel = 'intermediate'">
+                      🌿 中級（HSK 3-4 相当）
+                    </button>
+                  </div>
+
+                  <!-- 初級模範文 -->
+                  <div v-show="modelLevel === 'beginner' || isPrinting" class="model-essay-box print-model-box">
+                    <div class="essay-box-header">
+                      <h3>{{ analysisData.model_essays.beginner.level_title || '初級模範文' }}</h3>
+                      <button @click="speakChinese(analysisData.model_essays.beginner.essay_cn)" class="btn btn-outline audio-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                        🔊 全文を聴く
+                      </button>
                     </div>
 
-                    <div class="word-details">
-                      <span class="pos-badge">{{ item.pos }}</span>
-                      <span class="meaning-text">{{ item.meaning }}</span>
+                    <div class="essay-chinese-text">
+                      {{ analysisData.model_essays.beginner.essay_cn }}
+                    </div>
+                    <div class="essay-pinyin-text">
+                      {{ analysisData.model_essays.beginner.essay_pinyin }}
+                    </div>
+                    <div class="essay-ja-text">
+                      {{ analysisData.model_essays.beginner.essay_ja }}
                     </div>
 
-                    <!-- 例文 -->
-                    <div v-if="item.example_cn" class="word-example">
+                    <!-- ポイント解説 -->
+                    <div v-if="analysisData.model_essays.beginner.key_points" class="key-points-section">
+                      <h4>💡 学習のポイント</h4>
+                      <ul class="points-list">
+                        <li v-for="(point, idx) in analysisData.model_essays.beginner.key_points" :key="idx">
+                          {{ point }}
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- 中級模範文 -->
+                  <div v-show="modelLevel === 'intermediate' || isPrinting" class="model-essay-box print-model-box">
+                    <div class="essay-box-header">
+                      <h3>{{ analysisData.model_essays.intermediate.level_title || '中級模範文' }}</h3>
+                      <button @click="speakChinese(analysisData.model_essays.intermediate.essay_cn)" class="btn btn-outline audio-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                        🔊 全文を聴く
+                      </button>
+                    </div>
+
+                    <div class="essay-chinese-text">
+                      {{ analysisData.model_essays.intermediate.essay_cn }}
+                    </div>
+                    <div class="essay-pinyin-text">
+                      {{ analysisData.model_essays.intermediate.essay_pinyin }}
+                    </div>
+                    <div class="essay-ja-text">
+                      {{ analysisData.model_essays.intermediate.essay_ja }}
+                    </div>
+
+                    <!-- ポイント解説 -->
+                    <div v-if="analysisData.model_essays.intermediate.key_points" class="key-points-section">
+                      <h4>💡 使われた構文・文法の解説</h4>
+                      <ul class="points-list">
+                        <li v-for="(point, idx) in analysisData.model_essays.intermediate.key_points" :key="idx">
+                          {{ point }}
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- 未解析プレースホルダー -->
+                <div v-else class="empty-state">
+                  <div class="empty-icon">📖</div>
+                  <h3>模範作文はまだ生成されていません</h3>
+                  <p style="font-size: 0.85rem; margin-top: 0.35rem;">
+                    写真を解析すると、初級・中級レベルの模範作文がピンイン・解説付きで自動作成されます。
+                  </p>
+                </div>
+              </div>
+
+              <!-- タブ3: 作文添削結果 -->
+              <div v-show="activeTab === 'correction' || isPrinting" class="print-section print-order-2">
+                <div v-if="correctionData">
+                  
+                  <!-- スコアカード -->
+                  <div class="score-card">
+                    <div class="score-number">{{ correctionData.score }}<span style="font-size: 1.2rem; font-weight: 500;">点</span></div>
+                    <div class="score-comment">
+                      <div style="font-weight: 700; margin-bottom: 0.2rem;">👨‍🏫 AI教師からのコメント</div>
+                      <div>{{ correctionData.score_comment }}</div>
+                    </div>
+                  </div>
+
+                  <!-- 添削後の完成文 -->
+                  <div class="correction-section" style="background: var(--bg-card-subtle); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div class="flex items-center justify-between" style="margin-bottom: 0.5rem;">
+                      <span style="font-size: 0.85rem; font-weight: 700; color: var(--success); display: flex; align-items: center; gap: 0.35rem;">
+                        <span>✨</span> 添削後の完成中国語文
+                      </span>
+                      <button @click="speakChinese(correctionData.corrected_essay)" class="btn btn-outline audio-btn" style="padding: 0.3rem 0.7rem; font-size: 0.78rem;">
+                        🔊 音声を聴く
+                      </button>
+                    </div>
+                    <div style="font-family: var(--font-chinese); font-size: 1.15rem; font-weight: 600; line-height: 1.7; color: var(--text-main); margin-bottom: 0.35rem;">
+                      {{ correctionData.corrected_essay }}
+                    </div>
+                    <div style="font-size: 0.88rem; color: var(--primary); margin-bottom: 0.5rem;">
+                      {{ correctionData.corrected_pinyin }}
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                      {{ correctionData.corrected_ja }}
+                    </div>
+                  </div>
+
+                  <!-- 修正箇所詳細 -->
+                  <div v-if="correctionData.corrections && correctionData.corrections.length > 0" class="correction-section">
+                    <div class="section-subtitle">
+                      <span>🔍</span> 修正箇所の解説
+                    </div>
+                    <div v-for="(corr, idx) in correctionData.corrections" :key="idx" class="diff-card">
+                      <div class="diff-original">元の文: {{ corr.original }}</div>
+                      <div class="diff-corrected">修正後: {{ corr.corrected }} <span style="font-size: 0.82rem; font-weight: normal; color: var(--primary);">({{ corr.pinyin }})</span></div>
+                      <div class="diff-reason">{{ corr.reason }}</div>
+                    </div>
+                  </div>
+
+                  <!-- より自然な表現 (ネイティブTips) -->
+                  <div v-if="correctionData.better_expressions && correctionData.better_expressions.length > 0" class="correction-section">
+                    <div class="section-subtitle">
+                      <span>💡</span> ネイティブ度UPの表現
+                    </div>
+                    <div v-for="(exp, idx) in correctionData.better_expressions" :key="idx" class="diff-card">
                       <div class="flex items-center justify-between">
-                        <span class="example-cn">{{ item.example_cn }}</span>
-                        <button @click="speakChinese(item.example_cn)" class="action-btn-sm" style="width: 22px; height: 22px; font-size: 0.7rem;">🔊</button>
+                        <div style="font-family: var(--font-chinese); font-weight: 700; color: var(--text-main);">
+                          {{ exp.expression }} <span style="font-size: 0.82rem; color: var(--primary); font-weight: 500;">({{ exp.pinyin }})</span>
+                        </div>
+                        <button @click="speakChinese(exp.expression)" class="action-btn-sm audio-btn" style="width: 22px; height: 22px; font-size: 0.7rem;">🔊</button>
                       </div>
-                      <div class="example-pinyin">{{ item.example_pinyin }}</div>
-                      <div class="example-ja">{{ item.example_ja }}</div>
+                      <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        {{ exp.meaning }}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div style="margin-top: 1.25rem; text-align: center;">
-                  <button @click="activeTab = 'model'" class="btn btn-outline" style="font-size: 0.85rem; padding: 0.5rem 1.25rem;">
-                    📖 模範作文を見る ➔
-                  </button>
-                </div>
-              </div>
-
-              <!-- 未解析プレースホルダー -->
-              <div v-else class="empty-state">
-                <div class="empty-icon">🔍</div>
-                <h3>画像を選択して解析してください</h3>
-                <p style="font-size: 0.85rem; margin-top: 0.35rem;">
-                  写真をアップロードして「✨ AIで画像を解析」をクリックすると、AIが写真内の事物を観察し、中国語の重要単語と例文を抽出します。
-                </p>
-                <button v-if="currentImage" @click="analyzeImage(false)" class="btn btn-primary" style="margin-top: 1.25rem;">
-                  ✨ 今すぐ画像を解析する
-                </button>
-              </div>
-            </div>
-
-            <!-- タブ2: 模範作文 -->
-            <div v-else-if="activeTab === 'model'">
-              <div v-if="analysisData && analysisData.model_essays">
-                
-                <!-- レベル切り替えボタン -->
-                <div class="level-switch">
-                  <button 
-                    class="level-btn" 
-                    :class="{ active: modelLevel === 'beginner' }" 
-                    @click="modelLevel = 'beginner'">
-                    🌱 初級（HSK 1-2 相当）
-                  </button>
-                  <button 
-                    class="level-btn" 
-                    :class="{ active: modelLevel === 'intermediate' }" 
-                    @click="modelLevel = 'intermediate'">
-                    🌿 中級（HSK 3-4 相当）
-                  </button>
-                </div>
-
-                <!-- 初級模範文 -->
-                <div v-if="modelLevel === 'beginner' && analysisData.model_essays.beginner" class="model-essay-box">
-                  <div class="essay-box-header">
-                    <h3>{{ analysisData.model_essays.beginner.level_title || '初級模範文' }}</h3>
-                    <button @click="speakChinese(analysisData.model_essays.beginner.essay_cn)" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
-                      🔊 全文を聴く
-                    </button>
-                  </div>
-
-                  <div class="essay-chinese-text">
-                    {{ analysisData.model_essays.beginner.essay_cn }}
-                  </div>
-                  <div class="essay-pinyin-text">
-                    {{ analysisData.model_essays.beginner.essay_pinyin }}
-                  </div>
-                  <div class="essay-ja-text">
-                    {{ analysisData.model_essays.beginner.essay_ja }}
-                  </div>
-
-                  <!-- ポイント解説 -->
-                  <div v-if="analysisData.model_essays.beginner.key_points" class="key-points-section">
-                    <h4>💡 学習のポイント</h4>
+                  <!-- 文法ワンポイント -->
+                  <div v-if="correctionData.grammar_tips && correctionData.grammar_tips.length > 0" class="correction-section">
+                    <div class="section-subtitle">
+                      <span>📚</span> 日本人学習者への文法アドバイス
+                    </div>
                     <ul class="points-list">
-                      <li v-for="(point, idx) in analysisData.model_essays.beginner.key_points" :key="idx">
-                        {{ point }}
+                      <li v-for="(tip, idx) in correctionData.grammar_tips" :key="idx">
+                        {{ tip }}
                       </li>
                     </ul>
                   </div>
+
                 </div>
 
-                <!-- 中級模範文 -->
-                <div v-if="modelLevel === 'intermediate' && analysisData.model_essays.intermediate" class="model-essay-box">
-                  <div class="essay-box-header">
-                    <h3>{{ analysisData.model_essays.intermediate.level_title || '中級模範文' }}</h3>
-                    <button @click="speakChinese(analysisData.model_essays.intermediate.essay_cn)" class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
-                      🔊 全文を聴く
-                    </button>
-                  </div>
-
-                  <div class="essay-chinese-text">
-                    {{ analysisData.model_essays.intermediate.essay_cn }}
-                  </div>
-                  <div class="essay-pinyin-text">
-                    {{ analysisData.model_essays.intermediate.essay_pinyin }}
-                  </div>
-                  <div class="essay-ja-text">
-                    {{ analysisData.model_essays.intermediate.essay_ja }}
-                  </div>
-
-                  <!-- ポイント解説 -->
-                  <div v-if="analysisData.model_essays.intermediate.key_points" class="key-points-section">
-                    <h4>💡 使われた構文・文法の解説</h4>
-                    <ul class="points-list">
-                      <li v-for="(point, idx) in analysisData.model_essays.intermediate.key_points" :key="idx">
-                        {{ point }}
-                      </li>
-                    </ul>
-                  </div>
+                <!-- 添削未実行時のプレースホルダー -->
+                <div v-else class="empty-state">
+                  <div class="empty-icon">✍️</div>
+                  <h3>作文の添削結果はまだありません</h3>
+                  <p style="font-size: 0.85rem; margin-top: 0.35rem;">
+                    左側の作文エディタに中国語を入力し、「AIに添削してもらう」を押すと文法チェックや改善アドバイスが表示されます。
+                  </p>
                 </div>
-
               </div>
-
-              <!-- 未解析プレースホルダー -->
-              <div v-else class="empty-state">
-                <div class="empty-icon">📖</div>
-                <h3>模範作文はまだ生成されていません</h3>
-                <p style="font-size: 0.85rem; margin-top: 0.35rem;">
-                  写真を解析すると、初級・中級レベルの模範作文がピンイン・解説付きで自動作成されます。
-                </p>
-              </div>
-            </div>
-
-            <!-- タブ3: 作文添削結果 -->
-            <div v-else-if="activeTab === 'correction'">
-              <div v-if="correctionData">
-                
-                <!-- スコアカード -->
-                <div class="score-card">
-                  <div class="score-number">{{ correctionData.score }}<span style="font-size: 1.2rem; font-weight: 500;">点</span></div>
-                  <div class="score-comment">
-                    <div style="font-weight: 700; margin-bottom: 0.2rem;">👨‍🏫 AI教師からのコメント</div>
-                    <div>{{ correctionData.score_comment }}</div>
-                  </div>
-                </div>
-
-                <!-- 添削後の完成文 -->
-                <div class="correction-section" style="background: var(--bg-card-subtle); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                  <div class="flex items-center justify-between" style="margin-bottom: 0.5rem;">
-                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--success); display: flex; align-items: center; gap: 0.35rem;">
-                      <span>✨</span> 添削後の完成中国語文
-                    </span>
-                    <button @click="speakChinese(correctionData.corrected_essay)" class="btn btn-outline" style="padding: 0.3rem 0.7rem; font-size: 0.78rem;">
-                      🔊 音声を聴く
-                    </button>
-                  </div>
-                  <div style="font-family: var(--font-chinese); font-size: 1.15rem; font-weight: 600; line-height: 1.7; color: var(--text-main); margin-bottom: 0.35rem;">
-                    {{ correctionData.corrected_essay }}
-                  </div>
-                  <div style="font-size: 0.88rem; color: var(--primary); margin-bottom: 0.5rem;">
-                    {{ correctionData.corrected_pinyin }}
-                  </div>
-                  <div style="font-size: 0.85rem; color: var(--text-muted);">
-                    {{ correctionData.corrected_ja }}
-                  </div>
-                </div>
-
-                <!-- 修正箇所詳細 -->
-                <div v-if="correctionData.corrections && correctionData.corrections.length > 0" class="correction-section">
-                  <div class="section-subtitle">
-                    <span>🔍</span> 修正箇所の解説
-                  </div>
-                  <div v-for="(corr, idx) in correctionData.corrections" :key="idx" class="diff-card">
-                    <div class="diff-original">元の文: {{ corr.original }}</div>
-                    <div class="diff-corrected">修正後: {{ corr.corrected }} <span style="font-size: 0.82rem; font-weight: normal; color: var(--primary);">({{ corr.pinyin }})</span></div>
-                    <div class="diff-reason">{{ corr.reason }}</div>
-                  </div>
-                </div>
-
-                <!-- より自然な表現 (ネイティブTips) -->
-                <div v-if="correctionData.better_expressions && correctionData.better_expressions.length > 0" class="correction-section">
-                  <div class="section-subtitle">
-                    <span>💡</span> ネイティブ度UPの表現
-                  </div>
-                  <div v-for="(exp, idx) in correctionData.better_expressions" :key="idx" class="diff-card">
-                    <div class="flex items-center justify-between">
-                      <div style="font-family: var(--font-chinese); font-weight: 700; color: var(--text-main);">
-                        {{ exp.expression }} <span style="font-size: 0.82rem; color: var(--primary); font-weight: 500;">({{ exp.pinyin }})</span>
-                      </div>
-                      <button @click="speakChinese(exp.expression)" class="action-btn-sm" style="width: 22px; height: 22px; font-size: 0.7rem;">🔊</button>
-                    </div>
-                    <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
-                      {{ exp.meaning }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 文法ワンポイント -->
-                <div v-if="correctionData.grammar_tips && correctionData.grammar_tips.length > 0" class="correction-section">
-                  <div class="section-subtitle">
-                    <span>📚</span> 日本人学習者への文法アドバイス
-                  </div>
-                  <ul class="points-list">
-                    <li v-for="(tip, idx) in correctionData.grammar_tips" :key="idx">
-                      {{ tip }}
-                    </li>
-                  </ul>
-                </div>
-
-              </div>
-
-              <!-- 添削未実行時のプレースホルダー -->
-              <div v-else class="empty-state">
-                <div class="empty-icon">✍️</div>
-                <h3>作文の添削結果はまだありません</h3>
-                <p style="font-size: 0.85rem; margin-top: 0.35rem;">
-                  左側の作文エディタに中国語を入力し、「AIに添削してもらう」を押すと文法チェックや改善アドバイスが表示されます。
-                </p>
-              </div>
-            </div>
+            </template>
 
           </div>
         </div>

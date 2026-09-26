@@ -1436,6 +1436,135 @@ body.dark-theme .example-pinyin {
   margin-top: 0.25rem;
 }
 
+/* ==========================================================================
+   プリント (PDF) 用スタイル
+   ========================================================================== */
+@media print {
+  /* 不要なUI要素を非表示 */
+  .app-header, 
+  .header-actions, 
+  .tab-nav, 
+  .tab-nav-footer,
+  .essay-actions, 
+  .sample-images-bar, 
+  .status-banner, 
+  .upload-dropzone,
+  .level-switch,
+  .preview-overlay,
+  button,
+  .btn,
+  .btn-icon,
+  .action-btn-sm,
+  .audio-btn,
+  .word-example-audio {
+    display: none !important;
+  }
+  
+  /* 全体の背景と文字色を印刷向けにリセット */
+  body {
+    background-color: white !important;
+    color: black !important;
+    min-height: auto !important;
+  }
+  
+  .main-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  /* 2カラムレイアウトを解除して縦並びに */
+  .app-grid {
+    display: block !important;
+  }
 
+  .grid-column {
+    width: 100% !important;
+    margin-bottom: 20px;
+  }
+  
+  /* カードの影や枠線を消す */
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 30px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .print-order-1 { order: 1; }
+  .print-order-2 { order: 2; }
+  .print-order-3 { order: 3; }
+  
+  /* プリント用に表示するセクションのスタイル */
+  .print-section {
+    display: block !important;
+    page-break-inside: avoid;
+    margin-bottom: 30px;
+    padding-top: 15px;
+    border-top: 2px dashed #ccc;
+  }
 
+  .print-section:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+  
+  /* 見出しを分かりやすく */
+  .print-section::before {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #333;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+  }
 
+  /* 単語リスト */
+  .word-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+  }
+
+  .word-card {
+    border: 1px solid #ddd !important;
+    background: transparent !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    padding: 10px !important;
+  }
+
+  /* 作文テキストエリアを通常のdivのように見せる */
+  .essay-textarea {
+    border: 1px solid #ccc !important;
+    height: auto !important;
+    background: transparent !important;
+    color: black !important;
+    resize: none !important;
+    padding: 15px !important;
+  }
+  
+  /* ダークモード時の強制ライトモード化 */
+  * {
+    color: black !important;
+  }
+  
+  .model-essay-box, .diff-card, .score-card, .correction-section {
+    border: 1px solid #ddd !important;
+    background: transparent !important;
+    page-break-inside: avoid;
+  }
+  
+  /* プリント時は初級・中級の模範文を両方表示 */
+  .print-model-box {
+    display: block !important;
+    margin-bottom: 20px !important;
+  }
+
+  .empty-state {
+    display: none !important;
+  }
+}
