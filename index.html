@@ -87,11 +87,11 @@
 
         <div class="header-actions">
           <!-- デモモード / GAS接続ステータス -->
-          <button @click="openSettings" class="btn btn-outline" style="font-size: 0.82rem; padding: 0.4rem 0.8rem;">
+          <div class="btn btn-outline" style="font-size: 0.82rem; padding: 0.4rem 0.8rem; cursor: default;">
             <span class="status-dot" :class="{ 'connected': gasUrl, 'demo': isDemoMode }"></span>
             <span v-if="gasUrl">GAS連携中</span>
             <span v-else>デモモード (GAS未接続)</span>
-          </button>
+          </div>
 
           <!-- テーマ切替 -->
           <button @click="toggleTheme" class="btn-icon" :title="isDarkTheme ? 'ライトモードに切替' : 'ダークモードに切替'">
@@ -102,11 +102,6 @@
           <!-- プリントボタン -->
           <button @click="printLearningMaterial" class="btn-icon" title="学習内容をプリント(PDF)">
             🖨️
-          </button>
-
-          <!-- 設定ボタン -->
-          <button @click="openSettings" class="btn-icon" title="GAS連携・設定">
-            ⚙️
           </button>
         </div>
       </div>
@@ -119,11 +114,8 @@
       <div v-if="!gasUrl" class="status-banner">
         <div class="status-info">
           <span>💡</span>
-          <span><strong>デモモードで動作中:</strong> サンプルデータで全機能を体験できます。独自のGemini APIを利用するには右上の⚙️からGAS URLを設定してください。</span>
+          <span><strong>デモモードで動作中:</strong> サンプルデータで全機能を体験できます。独自のGemini APIを利用するには js/config.js にGAS URLを設定してください。</span>
         </div>
-        <button @click="openSettings" class="btn btn-primary" style="padding: 0.4rem 0.85rem; font-size: 0.82rem;">
-          GASと連携する
-        </button>
       </div>
 
       <!-- メイングリッド (左: 画像 & 作文, 右: 単語 / 模範文 / 添削) -->
@@ -618,76 +610,7 @@
       </div>
     </div>
 
-    <!-- GAS設定モーダル -->
-    <div v-if="showSettingsModal" class="modal-backdrop" @click.self="closeSettings">
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-            <span>⚙️</span> バックエンド (GAS) 設定
-          </h3>
-          <button @click="closeSettings" class="btn-icon" style="border: none;">✕</button>
-        </div>
 
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label">Google Apps Script (ウェブアプリURL)</label>
-            <input 
-              v-model="tempGasUrl" 
-              type="url" 
-              class="form-input" 
-              placeholder="https://script.google.com/macros/s/.../exec">
-            <div class="form-help">
-              <span v-if="configGasUrl" style="color: var(--color-success); font-weight: 500;">
-                ✓ <code>js/config.js</code> に埋め込みURLが設定されています。
-              </span>
-              <span v-else>
-                全端末共通で利用したい場合は、<code>js/config.js</code> にGAS URLを書き込むと自動で適用されます。
-              </span>
-            </div>
-          </div>
-
-          <div class="flex gap-2" style="margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <button 
-              @click="testGasConnection" 
-              class="btn btn-outline" 
-              :disabled="isTestingConnection || !tempGasUrl.trim()"
-              style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">
-              <span v-if="isTestingConnection">接続テスト中...</span>
-              <span v-else>🔄 接続テスト</span>
-            </button>
-            <button 
-              v-if="configGasUrl && tempGasUrl !== configGasUrl"
-              @click="applyConfigGasUrl" 
-              class="btn btn-outline" 
-              style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">
-              📋 config.js のURLを反映
-            </button>
-            <button 
-              v-if="configGasUrl"
-              @click="clearCustomGasUrl" 
-              class="btn btn-outline" 
-              style="padding: 0.45rem 0.9rem; font-size: 0.85rem; color: var(--text-muted);">
-              初期設定に戻す
-            </button>
-          </div>
-
-          <div style="background: var(--bg-card-subtle); padding: 1rem; border-radius: var(--radius-md); font-size: 0.82rem; line-height: 1.6; border: 1px solid var(--border-color);">
-            <div style="font-weight: 700; margin-bottom: 0.4rem; color: var(--text-main);">📌 GASのセットアップ手順:</div>
-            <ol style="padding-left: 1.2rem; color: var(--text-muted);">
-              <li>Google Apps Scriptに <code>gas/Code.js</code> のコードを貼り付けます。</li>
-              <li>「プロジェクトの設定 ⚙️」>「スクリプト プロパティ」に <code>GEMINI_API_KEY</code> を設定します。</li>
-              <li>「デプロイ」>「新しいデプロイ」>「ウェブアプリ」で、アクセス権「全員」でデプロイします。</li>
-              <li>発行された「ウェブアプリのURL」を <code>js/config.js</code> に貼り付けます。</li>
-            </ol>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button @click="closeSettings" class="btn btn-outline">キャンセル</button>
-          <button @click="saveSettings" class="btn btn-primary">保存して適用</button>
-        </div>
-      </div>
-    </div>
 
     <!-- トースト通知コンテナ -->
     <div class="toast-container">

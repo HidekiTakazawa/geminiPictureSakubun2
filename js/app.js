@@ -7,15 +7,9 @@ const { createApp, ref, computed, onMounted, nextTick } = Vue;
 createApp({
   setup() {
     // 状態管理
-    const configGasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL) ? CONFIG.GAS_URL.trim() : '';
-    const storedGasUrl = localStorage.getItem('cn_photo_essay_gas_url');
-    // localStorageに設定があればそれを優先、なければconfig.jsの設定を使用
-    const gasUrl = ref(storedGasUrl !== null ? storedGasUrl : configGasUrl);
-    const tempGasUrl = ref(gasUrl.value);
+    const gasUrl = ref((typeof CONFIG !== 'undefined' && CONFIG.GAS_URL) ? CONFIG.GAS_URL.trim() : '');
     const isDarkTheme = ref(localStorage.getItem('cn_photo_essay_theme') === 'dark');
     const isDemoMode = ref(!gasUrl.value);
-    const showSettingsModal = ref(false);
-    const isTestingConnection = ref(false);
 
     // 画像・解析状態
     const currentImage = ref(null); // { base64, mimeType, name, previewUrl, fromDrive, fileId, fileUrl }
@@ -81,72 +75,6 @@ createApp({
       }
     };
 
-    // 設定モーダル
-    const openSettings = () => {
-      tempGasUrl.value = gasUrl.value;
-      showSettingsModal.value = true;
-    };
-
-    const closeSettings = () => {
-      showSettingsModal.value = false;
-    };
-
-    const saveSettings = () => {
-      gasUrl.value = tempGasUrl.value.trim();
-      localStorage.setItem('cn_photo_essay_gas_url', gasUrl.value);
-      if (gasUrl.value) {
-        isDemoMode.value = false;
-        showToast('GASのWebアプリURLを保存しました', 'success');
-      } else {
-        isDemoMode.value = true;
-        showToast('GAS URLが未設定のため、デモモードで動作します', 'info');
-      }
-      closeSettings();
-    };
-
-    const applyConfigGasUrl = () => {
-      if (configGasUrl) {
-        tempGasUrl.value = configGasUrl;
-        showToast('config.jsで指定されたGAS URLを読み込みました', 'info');
-      }
-    };
-
-    const clearCustomGasUrl = () => {
-      localStorage.removeItem('cn_photo_essay_gas_url');
-      gasUrl.value = configGasUrl;
-      tempGasUrl.value = configGasUrl;
-      isDemoMode.value = !configGasUrl;
-      showToast('ブラウザ保存URLをクリアし、config.jsの初期設定に戻しました', 'info');
-      closeSettings();
-    };
-
-    // GAS接続テスト
-    const testGasConnection = async () => {
-      if (!tempGasUrl.value.trim()) {
-        showToast('GASのURLを入力してください', 'error');
-        return;
-      }
-      isTestingConnection.value = true;
-      try {
-        const response = await fetch(tempGasUrl.value.trim(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'test_connection' }),
-          redirect: 'follow'
-        });
-        const res = await response.json();
-        if (res.status === 'success') {
-          showToast('接続成功！Gemini APIとの連携が正常です。', 'success');
-        } else {
-          showToast(res.message || '接続エラーが発生しました', 'error');
-        }
-      } catch (err) {
-        console.error('GAS connection error:', err);
-        showToast(`接続エラー: ${err.message || 'CORSまたは権限承認を確認してください'}`, 'error');
-      } finally {
-        isTestingConnection.value = false;
-      }
-    };
 
     // 画像選択・ドロップ処理
     const handleFileChange = (e) => {
@@ -772,19 +700,9 @@ createApp({
     return {
       // 設定 & テーマ
       gasUrl,
-      tempGasUrl,
-      configGasUrl,
-      applyConfigGasUrl,
-      clearCustomGasUrl,
       isDarkTheme,
       isDemoMode,
-      showSettingsModal,
-      isTestingConnection,
       toggleTheme,
-      openSettings,
-      closeSettings,
-      saveSettings,
-      testGasConnection,
 
       // 画像 & 解析
       currentImage,
